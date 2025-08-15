@@ -1,7 +1,7 @@
 from fastapi import FastAPI
+from app.db.models import Base
+from app.db.session import engine
 
 app = FastAPI()
 
-@app.get("/")
-def read_root():
-    return {"message": "WebGuard API is running"}
+Base.metadata.create_all(bind=engine)
