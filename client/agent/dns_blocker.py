@@ -1,24 +1,22 @@
 import json
-from pathlib import Path
+import os
 import ctypes
+import sys
+from pathlib import Path
 from utils.config import settings
-from utils.token import load_token
-from .logger import BlockLogger
 
-POLICY_PATH = Path(settings.TOKEN_DIR) / "policy.json"
-HOSTS_PATH = r"C:\Windows\System32\drivers\etc\hosts"
+HOSTS_PATH = Path(os.path.expandvars(settings.HOSTS_PATH))
+POLICY_PATH = Path(settings.POLICY_PATH)
+LOCAL_OVERRIDE_PATH = Path(os.path.expandvars(settings.LOCAL_OVERRIDE_PATH))
+REDIRECT_IP = "127.0.0.1"
 
 class DNSBlocker:
-    REDIRECT_IP = "127.0.0.1"
-
     def __init__(self):
         self.blocked_domains = set()
+        self.local_override = set()
         self.load_policy()
+        self.load_local_override()
         self.ensure_admin()
-
-        token_data = load_token()
-        self.agent_id = token_data.get("agent_id") if token_data else None
-        self.logger = BlockLogger(self.agent_id) if self.agent_id else None
 
     def ensure_admin(self):
         try:
@@ -26,59 +24,72 @@ class DNSBlocker:
         except Exception:
             is_admin = False
         if not is_admin:
-            print("⚠️ 관리자 권한으로 실행해야 hosts 파일 수정 가능")
+            print("⚠️ 관리자 권한 필요합니다. 프로그램을 종료합니다.")
+            sys.exit(1)
 
     def load_policy(self):
         if POLICY_PATH.exists():
             with open(POLICY_PATH, "r", encoding="utf-8") as f:
                 data = json.load(f)
-                for site in data.get("sites", []):
-                    self.blocked_domains.add(site["domain"])
-            print(f"✅ {len(self.blocked_domains)}개 도메인 로드 완료")
+                self.blocked_domains = set(site["domain"] for site in data.get("sites", []))
         else:
-            print("❌ 정책 파일이 없습니다. 먼저 policy_sync.py 실행 필요")
+            print("❌ 정책 파일 없음")
 
-    def update_hosts_file(self):
+    def load_local_override(self):
+        if LOCAL_OVERRIDE_PATH.exists():
+            with open(LOCAL_OVERRIDE_PATH, "r", encoding="utf-8") as f:
+                self.local_override = set(json.load(f))
+        else:
+            self.local_override = set()
+
+    def save_local_override(self):
+        LOCAL_OVERRIDE_PATH.parent.mkdir(parents=True, exist_ok=True)
+        with open(LOCAL_OVERRIDE_PATH, "w", encoding="utf-8") as f:
+            json.dump(list(self.local_override), f, indent=2)
+
+    def apply_blacklist(self):
         if not self.blocked_domains:
             return
 
         with open(HOSTS_PATH, "r", encoding="utf-8") as f:
             lines = f.readlines()
 
-        # 이전 WebGuard 항목 제거
         lines = [line for line in lines if "# WebGuard" not in line]
 
         for domain in self.blocked_domains:
-            lines.append(f"{self.REDIRECT_IP} {domain} # WebGuard\n")
-            # 차단 로그 기록
-            if self.logger:
-                self.logger.add_log(domain)
+            if domain not in self.local_override:
+                lines.append(f"{REDIRECT_IP} {domain} # WebGuard\n")
 
         with open(HOSTS_PATH, "w", encoding="utf-8") as f:
             f.writelines(lines)
+        print(f"✅ hosts 파일 업데이트 완료 ({len(self.blocked_domains)}개 도메인 적용)")
 
-        print(f"✅ hosts 파일 업데이트 완료: {len(self.blocked_domains)}개 도메인 차단")
+    # 사용자 로컬에서만 차단 해제
+    def unblock_locally(self, domain: str):
+        if domain in self.blocked_domains:
+            self.local_override.add(domain)
+            self.save_local_override()
+            print(f"{domain} 로컬 차단 해제 완료")
+        else:
+            print(f"{domain}는 블랙리스트에 없습니다")
 
-    def block_all(self):
-        self.update_hosts_file()
-        # 차단 로그 서버 업로드
-        if self.logger:
-            self.logger.upload_logs()
-
-    def unblock_all(self):
-        if not POLICY_PATH.exists():
+    def list_unblocked(self):
+        if not self.local_override:
+            print("로컬 차단 해제된 도메인 없음")
             return
-        with open(HOSTS_PATH, "r", encoding="utf-8") as f:
-            lines = f.readlines()
-            # WebGuard 항목 제거
-        lines = [line for line in lines if "# WebGuard" not in line]
-        with open(HOSTS_PATH, "w", encoding="utf-8") as f:
-            f.writelines(lines)
-        print("✅ 모든 차단 해제 완료")
+        print("로컬 차단 해제 도메인 목록:")
+        for d in self.local_override:
+            print("-", d)
 
+    def remove_local_override(self, domain: str):
+        if domain in self.local_override:
+            self.local_override.remove(domain)
+            self.save_local_override()
+            print(f"{domain} 로컬 차단 해제 목록에서 삭제")
+        else:
+            print(f"{domain}는 로컬 차단 해제 목록에 없음")
 
 if __name__ == "__main__":
     blocker = DNSBlocker()
-    blocker.block_all()
-    blocker.unblock_all()
-    print("✅ 차단 해제 완료")
+    blocker.apply_blacklist()
+    print("✅ DNS 차단 적용 완료")
