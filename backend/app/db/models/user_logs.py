@@ -7,7 +7,7 @@ class UserLog(Base):
     __tablename__ = "user_logs"
 
     id = Column(BigInteger, primary_key=True, index=True)
-    user_id = Column(BigInteger, ForeignKey("users.id"), nullable=False)
+    user_id = Column(BigInteger, ForeignKey("users.id"), nullable=True)
     site_id = Column(BigInteger, ForeignKey("blacklist_sites.id"), nullable=False)
     attempted_at = Column(DateTime, default=datetime.utcnow)
     action = Column(Enum('blocked', 'warned', name="log_action"), nullable=False)
