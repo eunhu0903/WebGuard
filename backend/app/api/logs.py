@@ -1,14 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from app.db.session import get_db
-from app.db.models import User, UserLog, BlacklistSite
+from app.db.models import UserLog, BlacklistSite
 from app.schemas.logs import LogsUploadRequest
 from app.api.dependencies import verify_agent
 
 router = APIRouter()
 
-@router.post("/logs/upload")
-def upload_logs(logs_request: LogsUploadRequest, db: Session = Depends(get_db)):
+@router.post("/logs/upload", tags=["Logs"])
+def upload_logs(logs_request: LogsUploadRequest, db: Session = Depends(get_db), agent = Depends(verify_agent)):
     for log in logs_request.logs:
         site = db.query(BlacklistSite).filter(BlacklistSite.domain == log.site_domain).first()
         if not site:
