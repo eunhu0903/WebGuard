@@ -8,7 +8,7 @@ from app.api.dependencies import verify_agent
 router = APIRouter()
 
 @router.get("/policy/blacklist", response_model=BlacklistResponse)
-def get_blacklist(db: Session = Depends(get_db), agent=Depends(verify_agent)):
+def get_blacklist(db: Session = Depends(get_db)):
     sites = db.query(BlacklistSite).all()
     response_sites = [
         BlacklistSiteResponse(
