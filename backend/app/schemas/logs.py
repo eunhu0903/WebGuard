@@ -9,3 +9,9 @@ class LogEntry(BaseModel):
 
 class LogsUploadRequest(BaseModel):
     logs: List[LogEntry]
+
+class BlockLogCreate(BaseModel):
+    agent_id: str
+    site_domain: str
+    action: str = "blocked"
+    attempted_at: datetime
