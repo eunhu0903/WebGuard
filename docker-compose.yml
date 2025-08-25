@@ -1,7 +1,7 @@
 services:
-  db:
+  db_mysql:
     image: mysql:8.0
-    container_name: webguard
+    container_name: webguard-mysql
     restart: always
     env_file:
       - .env
@@ -15,5 +15,19 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
 
+  db_postgres:
+    image: postgres:15
+    container_name: webguard-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
 volumes:
   mysql_data:
+  pgdata:
