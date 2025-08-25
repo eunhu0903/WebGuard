@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from app.db.session import get_db
+from app.db.session import get_db_mysql
 from app.db.models import BlacklistSite
 from app.schemas.policy import BlacklistSiteResponse, BlacklistResponse
 from app.api.dependencies import verify_agent
@@ -8,7 +8,7 @@ from app.api.dependencies import verify_agent
 router = APIRouter()
 
 @router.get("/policy/blacklist", response_model=BlacklistResponse, tags=["Policy"])
-def get_blacklist(db: Session = Depends(get_db), agent = Depends(verify_agent)):
+def get_blacklist(db: Session = Depends(get_db_mysql), agent = Depends(verify_agent)):
     sites = db.query(BlacklistSite).all()
     response_sites = [
         BlacklistSiteResponse(

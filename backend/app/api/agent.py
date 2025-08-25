@@ -2,7 +2,7 @@ import uuid
 import secrets
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from app.db.session import get_db
+from app.db.session import get_db_mysql
 from app.db.models import Agent
 from app.schemas.agent import AgentCreate, AgentResponse, AgentAuth
 from app.api.dependencies import verify_agent
@@ -10,7 +10,7 @@ from app.api.dependencies import verify_agent
 router = APIRouter()
 
 @router.post("/agent/install", response_model=AgentResponse)
-def install_agent(agent: AgentCreate, db: Session = Depends(get_db)):
+def install_agent(agent: AgentCreate, db: Session = Depends(get_db_mysql)):
     agent_uuid = str(uuid.uuid4())
     token = secrets.token_hex(32)
 

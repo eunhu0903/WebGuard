@@ -1,9 +1,9 @@
 from fastapi import HTTPException, status, Header, Depends
 from sqlalchemy.orm import Session
-from app.db.session import get_db
+from app.db.session import get_db_mysql
 from app.db.models import Agent
 
-def verify_agent(agent_id: str = Header(...), token: str = Header(...), db: Session = Depends(get_db)) -> Agent:
+def verify_agent(agent_id: str = Header(...), token: str = Header(...), db: Session = Depends(get_db_mysql)) -> Agent:
     agent = db.query(Agent).filter(Agent.agent_id == agent_id, Agent.token == token).first()
     if not agent:
         raise HTTPException(
