@@ -1,4 +1,5 @@
 import os
+import time
 from utils.token import save_token, load_token
 from utils.config import settings
 import requests
@@ -42,6 +43,5 @@ class Agent:
         }
         return requests.post(url, json=payload)
 
-if __name__ == "__main__":
-    agent = Agent()
-    agent.run()
+def run():
+    print("Agent 서비스 실행")

@@ -89,7 +89,5 @@ class DNSBlocker:
         else:
             print(f"{domain}는 로컬 차단 해제 목록에 없음")
 
-if __name__ == "__main__":
-    blocker = DNSBlocker()
-    blocker.apply_blacklist()
+def run():
     print("✅ DNS 차단 적용 완료")
