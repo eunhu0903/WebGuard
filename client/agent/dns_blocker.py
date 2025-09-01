@@ -2,6 +2,7 @@ import json
 import os
 import ctypes
 import sys
+import subprocess
 from pathlib import Path
 from utils.config import settings
 
@@ -26,6 +27,13 @@ class DNSBlocker:
         if not is_admin:
             print("⚠️ 관리자 권한 필요합니다. 프로그램을 종료합니다.")
             sys.exit(1)
+    
+    def flush_dns_windows(self):
+        try:
+            subprocess.run(["ipconfig", "/flushdns"], check=True)
+            print("🔄 Windows DNS 캐시 플러시 완료")
+        except subprocess.CalledProcessError:
+            print("❌ DNS 캐시 플러시 실패. 관리자 권한 확인 필요")
 
     def load_policy(self):
         if POLICY_PATH.exists():
@@ -34,6 +42,12 @@ class DNSBlocker:
                 self.blocked_domains = set(site["domain"] for site in data.get("sites", []))
         else:
             print("❌ 정책 파일 없음")
+    
+    def get_unblocked_domains(self):
+        return list(self.local_override)
+
+    def get_blocked_domains(self):
+        return [d for d in self.blocked_domains if d not in self.local_override]
 
     def load_local_override(self):
         if LOCAL_OVERRIDE_PATH.exists():
@@ -62,9 +76,12 @@ class DNSBlocker:
 
         with open(HOSTS_PATH, "w", encoding="utf-8") as f:
             f.writelines(lines)
+
         print(f"✅ hosts 파일 업데이트 완료 ({len(self.blocked_domains)}개 도메인 적용)")
 
-    # 사용자 로컬에서만 차단 해제
+        self.flush_dns_windows()
+        print("✅ DNS 캐시 플러시 완료, 브라우저를 재시작하면 차단이 바로 적용됩니다.")
+
     def unblock_locally(self, domain: str):
         if domain in self.blocked_domains:
             self.local_override.add(domain)
