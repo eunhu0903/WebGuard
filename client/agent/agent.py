@@ -1,9 +1,8 @@
 import os
-import time
+import platform
+import requests
 from utils.token import save_token, load_token
 from utils.config import settings
-import requests
-import platform
 
 class Agent:
     def __init__(self):
@@ -14,34 +13,36 @@ class Agent:
         self.agent_id = None
 
     def run(self):
+        """Agent 실행: 기존 토큰 확인 후 없으면 서버 등록"""
         token_data = load_token()
-        if token_data:
-            self.agent_id = token_data.get("agent_id")
+        if token_data and "agent_id" in token_data:
+            self.agent_id = token_data["agent_id"]
             print(f"✅ 이미 등록된 에이전트: {self.agent_id}")
         else:
             print("🔑 에이전트 없음, 서버 등록 중...")
             self.register_and_save()
 
     def register_and_save(self):
-        """서버에서 Agent ID 발급"""
+        """서버에서 Agent ID 발급 및 저장"""
         try:
-            response = self.register_agent()
-            response.raise_for_status()
-            data = response.json()
+            data = self.register_agent()
             self.agent_id = data["agent_id"]
             save_token({"agent_id": self.agent_id})
             print(f"✅ 서버 등록 완료: {self.agent_id}")
-        except requests.RequestException as e:
+        except Exception as e:
             print(f"❌ 서버 등록 실패: {e}")
 
     def register_agent(self):
-        """서버 API 호출"""
+        """서버 API 호출, JSON 결과 반환"""
         url = f"{self.server_url}/agent/install"
         payload = {
             "os": platform.system(),
             "version": "1.0.0"
         }
-        return requests.post(url, json=payload)
+        response = requests.post(url, json=payload, timeout=5)
+        response.raise_for_status()
+        return response.json()
+
 
 def run():
-    print("Agent 서비스 실행")
+    Agent().run()
