@@ -9,8 +9,23 @@ class WebGuardShell(cmd.Cmd):
         super().__init__()
         self.blocker = DNSBlocker()
 
-    def do_list(self, arg):
-        self.blocker.list_unblocked()
+    def do_unblock_list(self, arg):
+        unblocked = self.blocker.get_unblocked_domains()
+        if unblocked:
+            print("📃 해제된 도메인 목록:")
+            for domain in unblocked:
+                print(f" - {domain}")
+        else:
+            print("✅ 해제된 도메인이 없습니다.")
+    
+    def do_block_list(self, arg):
+        blocked = self.blocker.get_blocked_domains()
+        if blocked:
+            print("📃 차단된 도메인 목록:")
+            for domain in blocked:
+                print(f" - {domain}")
+        else:
+            print("✅ 차단된 도메인이 없습니다.")
 
     def do_unblock(self, domain):
         if domain:
